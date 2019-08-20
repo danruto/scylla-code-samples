@@ -21,7 +21,7 @@ VM_OS="$CENTOS7"
 TIMESTAMP=`date "+%m-%d--%H%M"`
 
 
-while getopts ":hnudrbp:c:z:v:s:t:" opt; do
+while getopts ":hnudrbp:c:z:v:s:t:m:" opt; do
 	case $opt in
 		h)  echo ""
 		    echo ""
@@ -72,6 +72,7 @@ while getopts ":hnudrbp:c:z:v:s:t:" opt; do
 		d)  VM_OS=$DEB8 ;;
 		r)  VM_OS=$RH7 ;;
 		b)  VM_OS=$U14 ;; 
+    m)  VM_NUM=$OPTARG ;;
 		\?)  echo "Invalid option: -$OPTARG"
 		    exit 2
 		    ;;
@@ -81,7 +82,6 @@ while getopts ":hnudrbp:c:z:v:s:t:" opt; do
 	esac
 done
 
-
 VER=`echo $RELEASE | sed s/\\\./-/g`
 
 
@@ -89,20 +89,15 @@ VER=`echo $RELEASE | sed s/\\\./-/g`
 if [ $SSD == "YES" ]; then
 	echo ""
 	echo ""
-	echo "### Creating disks in '$ZONE' zone: 6 SSD drives, $SSD_SIZE GB each"
-	gcloud compute disks create "`whoami`-$TIMESTAMP-ansible-1-ssd-1" --size "$SSD_SIZE" --type "pd-ssd" --zone "$ZONE" &> /dev/null
-	echo ""
-	echo "### `whoami`-$TIMESTAMP-ansible-1-ssd-1 created"
-        gcloud compute disks create "`whoami`-$TIMESTAMP-ansible-1-ssd-2" --size "$SSD_SIZE" --type "pd-ssd" --zone "$ZONE" &> /dev/null
+  for i in {0..$VM_NUM}
+  do
+        echo "### Creating disks in '$ZONE' zone: 6 SSD drives, $SSD_SIZE GB each"
+        gcloud compute disks create "`whoami`-$TIMESTAMP-ansible-$i-ssd-1" --size "$SSD_SIZE" --type "pd-ssd" --zone "$ZONE" &> /dev/null
+        echo ""
+        echo "### `whoami`-$TIMESTAMP-ansible-1-ssd-1 created"
+        gcloud compute disks create "`whoami`-$TIMESTAMP-ansible-$i-ssd-2" --size "$SSD_SIZE" --type "pd-ssd" --zone "$ZONE" &> /dev/null
         echo "### `whoami`-$TIMESTAMP-ansible-1-ssd-2 created"
-        gcloud compute disks create "`whoami`-$TIMESTAMP-ansible-2-ssd-1" --size "$SSD_SIZE" --type "pd-ssd" --zone "$ZONE" &> /dev/null
-        echo "### `whoami`-$TIMESTAMP-ansible-2-ssd-1 created"
-        gcloud compute disks create "`whoami`-$TIMESTAMP-ansible-2-ssd-2" --size "$SSD_SIZE" --type "pd-ssd" --zone "$ZONE" &> /dev/null
-        echo "### `whoami`-$TIMESTAMP-ansible-2-ssd-2 created"
-        gcloud compute disks create "`whoami`-$TIMESTAMP-ansible-3-ssd-1" --size "$SSD_SIZE" --type "pd-ssd" --zone "$ZONE" &> /dev/null
-        echo "### `whoami`-$TIMESTAMP-ansible-3-ssd-1 created"
-        gcloud compute disks create "`whoami`-$TIMESTAMP-ansible-3-ssd-2" --size "$SSD_SIZE" --type "pd-ssd" --zone "$ZONE" &> /dev/null
-        echo "### `whoami`-$TIMESTAMP-ansible-3-ssd-2 created"
+  done
 
 
 # Create 3 CentOS7 VMs, boot disk 20GB, each VM with 2 SSD drives, 80GB storage
@@ -111,22 +106,25 @@ if [ $SSD == "YES" ]; then
 	echo "### Creating 3 VMs ($VM_TYPE) in '$ZONE' zone | 20GB boot disk | $SSD_SIZE GB SSD drive x 2"
 	echo "### $VM_OS"
 	echo ""
-	gcloud compute --project "$PROJECT" instances create "`whoami`-$TIMESTAMP-scylla-$VER-ansible-1" --zone "$ZONE" --machine-type "$VM_TYPE" --network "default" --maintenance-policy "MIGRATE" --service-account "$PROJECT@appspot.gserviceaccount.com" --scopes "https://www.googleapis.com/auth/devstorage.read_only","https://www.googleapis.com/auth/logging.write","https://www.googleapis.com/auth/monitoring.write","https://www.googleapis.com/auth/servicecontrol","https://www.googleapis.com/auth/service.management.readonly","https://www.googleapis.com/auth/trace.append" --tags "http-server","https-server" --disk "name=`whoami`-$TIMESTAMP-ansible-1-ssd-1,device-name=`whoami`-$TIMESTAMP-ansible-1-ssd-1,mode=rw,boot=no,auto-delete=yes" --disk "name=`whoami`-$TIMESTAMP-ansible-1-ssd-2,device-name=`whoami`-$TIMESTAMP-ansible-1-ssd-2,mode=rw,boot=no,auto-delete=yes" $VM_OS --boot-disk-size "20" --boot-disk-type "pd-ssd" --boot-disk-device-name "`whoami`-ansible-1"
-	gcloud compute --project "$PROJECT" instances create "`whoami`-$TIMESTAMP-scylla-$VER-ansible-2" --zone "$ZONE" --machine-type "$VM_TYPE" --network "default" --maintenance-policy "MIGRATE" --service-account "$PROJECT@appspot.gserviceaccount.com" --scopes "https://www.googleapis.com/auth/devstorage.read_only","https://www.googleapis.com/auth/logging.write","https://www.googleapis.com/auth/monitoring.write","https://www.googleapis.com/auth/servicecontrol","https://www.googleapis.com/auth/service.management.readonly","https://www.googleapis.com/auth/trace.append" --tags "http-server","https-server" --disk "name=`whoami`-$TIMESTAMP-ansible-2-ssd-1,device-name=`whoami`-$TIMESTAMP-ansible-2-ssd-1,mode=rw,boot=no,auto-delete=yes" --disk "name=`whoami`-$TIMESTAMP-ansible-2-ssd-2,device-name=`whoami`-$TIMESTAMP-ansible-2-ssd-2,mode=rw,boot=no,auto-delete=yes" $VM_OS --boot-disk-size "20" --boot-disk-type "pd-ssd" --boot-disk-device-name "`whoami`-ansible-2"
-	gcloud compute --project "$PROJECT" instances create "`whoami`-$TIMESTAMP-scylla-$VER-ansible-3" --zone "$ZONE" --machine-type "$VM_TYPE" --network "default" --maintenance-policy "MIGRATE" --service-account "$PROJECT@appspot.gserviceaccount.com" --scopes "https://www.googleapis.com/auth/devstorage.read_only","https://www.googleapis.com/auth/logging.write","https://www.googleapis.com/auth/monitoring.write","https://www.googleapis.com/auth/servicecontrol","https://www.googleapis.com/auth/service.management.readonly","https://www.googleapis.com/auth/trace.append" --tags "http-server","https-server" --disk "name=`whoami`-$TIMESTAMP-ansible-3-ssd-1,device-name=`whoami`-$TIMESTAMP-ansible-3-ssd-1,mode=rw,boot=no,auto-delete=yes" --disk "name=`whoami`-$TIMESTAMP-ansible-3-ssd-2,device-name=`whoami`-$TIMESTAMP-ansible-3-ssd-2,mode=rw,boot=no,auto-delete=yes" $VM_OS --boot-disk-size "20" --boot-disk-type "pd-ssd" --boot-disk-device-name "`whoami`-ansible-3"
+  for i in {0..$VM_NUM}
+  do
+	gcloud compute --project "$PROJECT" instances create "`whoami`-$TIMESTAMP-scylla-$VER-ansible-$i" --zone "$ZONE" --machine-type "$VM_TYPE" --network "default" --maintenance-policy "MIGRATE" --service-account "$PROJECT@appspot.gserviceaccount.com" --scopes "https://www.googleapis.com/auth/devstorage.read_only","https://www.googleapis.com/auth/logging.write","https://www.googleapis.com/auth/monitoring.write","https://www.googleapis.com/auth/servicecontrol","https://www.googleapis.com/auth/service.management.readonly","https://www.googleapis.com/auth/trace.append" --tags "http-server","https-server" --disk "name=`whoami`-$TIMESTAMP-ansible-1-ssd-1,device-name=`whoami`-$TIMESTAMP-ansible-1-ssd-1,mode=rw,boot=no,auto-delete=yes" --disk "name=`whoami`-$TIMESTAMP-ansible-1-ssd-2,device-name=`whoami`-$TIMESTAMP-ansible-1-ssd-2,mode=rw,boot=no,auto-delete=yes" $VM_OS --boot-disk-size "20" --boot-disk-type "pd-ssd" --boot-disk-device-name "`whoami`-ansible-$i"
 
+  done
 else
 
 # Create 3 CentOS7 VMs, boot disk 20GB, each VM with 2 NVMe drives, 750GB storage
         echo ""
 	echo ""
-        echo "### Creating 3 VMs ($VM_TYPE) in '$ZONE' zone | 20GB boot disk | 375GB NVMe drive x $NVME_NUM"
+        echo "### Creating $i VMs ($VM_TYPE) in '$ZONE' zone | 20GB boot disk | 375GB NVMe drive x $NVME_NUM"
 	echo "### $VM_OS"
         echo ""
-	gcloud compute --project "$PROJECT" instances create "`whoami`-$TIMESTAMP-scylla-$VER-ansible-1" --zone "$ZONE" --machine-type "$VM_TYPE" --network "default" --maintenance-policy "MIGRATE" --service-account "$PROJECT@appspot.gserviceaccount.com" --scopes "https://www.googleapis.com/auth/devstorage.read_only","https://www.googleapis.com/auth/logging.write","https://www.googleapis.com/auth/monitoring.write","https://www.googleapis.com/auth/servicecontrol","https://www.googleapis.com/auth/service.management.readonly","https://www.googleapis.com/auth/trace.append" --tags "http-server","https-server" $VM_OS --boot-disk-size "20" --boot-disk-type "pd-ssd" --boot-disk-device-name "`whoami`-ansible-1" `myString=$(printf "%$NVME_NUM"s);echo ${myString// /'--local-ssd interface=NVME' }`
-        gcloud compute --project "$PROJECT" instances create "`whoami`-$TIMESTAMP-scylla-$VER-ansible-2" --zone "$ZONE" --machine-type "$VM_TYPE" --network "default" --maintenance-policy "MIGRATE" --service-account "$PROJECT@appspot.gserviceaccount.com" --scopes "https://www.googleapis.com/auth/devstorage.read_only","https://www.googleapis.com/auth/logging.write","https://www.googleapis.com/auth/monitoring.write","https://www.googleapis.com/auth/servicecontrol","https://www.googleapis.com/auth/service.management.readonly","https://www.googleapis.com/auth/trace.append" --tags "http-server","https-server" $VM_OS --boot-disk-size "20" --boot-disk-type "pd-ssd" --boot-disk-device-name "`whoami`-ansible-2" `myString=$(printf "%$NVME_NUM"s);echo ${myString// /'--local-ssd interface=NVME' }`
-        gcloud compute --project "$PROJECT" instances create "`whoami`-$TIMESTAMP-scylla-$VER-ansible-3" --zone "$ZONE" --machine-type "$VM_TYPE" --network "default" --maintenance-policy "MIGRATE" --service-account "$PROJECT@appspot.gserviceaccount.com" --scopes "https://www.googleapis.com/auth/devstorage.read_only","https://www.googleapis.com/auth/logging.write","https://www.googleapis.com/auth/monitoring.write","https://www.googleapis.com/auth/servicecontrol","https://www.googleapis.com/auth/service.management.readonly","https://www.googleapis.com/auth/trace.append" --tags "http-server","https-server" $VM_OS --boot-disk-size "20" --boot-disk-type "pd-ssd" --boot-disk-device-name "`whoami`-ansible-3" `myString=$(printf "%$NVME_NUM"s);echo ${myString// /'--local-ssd interface=NVME' }`
+        for i in {0..$VM_NUM}
+        do
 
+          gcloud compute --project "$PROJECT" instances create "`whoami`-$TIMESTAMP-scylla-$VER-ansible-$i" --zone "$ZONE" --machine-type "$VM_TYPE" --network "default" --maintenance-policy "MIGRATE" --service-account "$PROJECT@appspot.gserviceaccount.com" --scopes "https://www.googleapis.com/auth/devstorage.read_only","https://www.googleapis.com/auth/logging.write","https://www.googleapis.com/auth/monitoring.write","https://www.googleapis.com/auth/servicecontrol","https://www.googleapis.com/auth/service.management.readonly","https://www.googleapis.com/auth/trace.append" --tags "http-server","https-server" $VM_OS --boot-disk-size "20" --boot-disk-type "pd-ssd" --boot-disk-device-name "`whoami`-ansible-1" `myString=$(printf "%$NVME_NUM"s);echo ${myString// /'--local-ssd interface=NVME' }`
+
+        done
 fi
 
 
@@ -143,10 +141,10 @@ echo ""
 echo "### Creating inventory file (servers.ini) with VMs external IP addresses"
 echo ""
 echo "[scylla]" > servers.ini
-gcloud compute instances describe `whoami`-$TIMESTAMP-scylla-$VER-ansible-1 --zone "$ZONE" | grep -i natip | cut -d ":" -f2 | awk '{$1=$1};1' >> servers.ini
-gcloud compute instances describe `whoami`-$TIMESTAMP-scylla-$VER-ansible-2 --zone "$ZONE" | grep -i natip | cut -d ":" -f2 | awk '{$1=$1};1' >> servers.ini
-gcloud compute instances describe `whoami`-$TIMESTAMP-scylla-$VER-ansible-3 --zone "$ZONE" | grep -i natip | cut -d ":" -f2 | awk '{$1=$1};1' >> servers.ini
-
+for i in {0..$VM_NUM}
+do
+  gcloud compute instances describe `whoami`-$TIMESTAMP-scylla-$VER-ansible-$i --zone "$ZONE" | grep -i natip | cut -d ":" -f2 | awk '{$1=$1};1' >> servers.ini
+done
 
 # Update Scylla release in playbook yml file
 echo ""
