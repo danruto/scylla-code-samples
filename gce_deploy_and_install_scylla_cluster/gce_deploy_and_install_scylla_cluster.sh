@@ -93,7 +93,7 @@ VER=`echo $RELEASE | sed s/\\\./-/g`
 if [ $SSD == "YES" ]; then
 	echo ""
 	echo ""
-  for i in $(seq $VM_NUM)
+  for i in $(seq 1 $VM_NUM)
   do
         echo "### Creating disks in '$ZONE' zone: 6 SSD drives, $SSD_SIZE GB each"
         gcloud compute disks create "`whoami`-$TIMESTAMP-ansible-$i-ssd-1" --size "$SSD_SIZE" --type "pd-ssd" --zone "$ZONE" &> /dev/null
